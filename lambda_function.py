@@ -5,7 +5,8 @@ import time
 from openai import OpenAI
 
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('iCompanionWordsTable')
+words_table = dynamodb.Table('iCompanionWordsTable')
+users_table = dynamodb.Table('iCompanionUsersTable')
 
 
 def get_api_key():
@@ -53,30 +54,63 @@ The json should be like:
     return json.loads(response)
     
     
-def lambda_handler(event, context):
-    gmt_time = time.gmtime()
+TEMP_USER_ID = 'jaeman'
 
-    now = time.strftime('%a, %d %b %Y %H:%M:%S +0000', gmt_time)
+def lambda_handler(event, context):
+
+    today = time.strftime('%Y%m%d', time.gmtime())
     word = event['word']
     
-    response = table.get_item(Key={'word': word})
+    user_info = users_table.get_item(Key={'user_id': TEMP_USER_ID, 'in_date': today})
+    if 'Item' in user_info:
+        item = user_info['Item']
+        words = item['words']
+        if word not in words:
+            words.append(word)
+            try:
+                users_table.put_item(
+                    Item={
+                        'user_id': TEMP_USER_ID,
+                        'in_date': today,
+                        'words': words
+                    },
+                    ConditionExpression='attribute_not_exists(word)'
+                )
+            except botocore.exceptions.ClientError as e:
+                if e.response['Error']['Code'] != 'ConditionalCheckFailedException':
+                    raise
+    else: 
+        try:
+            users_table.put_item(
+                Item={
+                    'user_id': TEMP_USER_ID,
+                    'in_date': today,
+                    'words': [word]
+                },
+                ConditionExpression='attribute_not_exists(word)'
+            )
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] != 'ConditionalCheckFailedException':
+                raise
+
+    word_info = words_table.get_item(Key={'word': word})
     
-    if 'Item' in response:
-        item = response['Item']
+    if 'Item' in word_info:
+        item = word_info['Item']
         return {
             'statusCode': 200,
             'body': f'[{json.dumps(item)}]'
         }
 
-    item = query_llm(word.lower())
+    word_info = query_llm(word.lower())
 
     try:
-        table.put_item(
+        words_table.put_item(
             Item={
-                'word': item['word'],
-                'usages': item['usages'],
-                "related_information": item['related_information'],
-                'meanings': item['meanings']
+                'word': word_info['word'],
+                'usages': word_info['usages'],
+                "related_information": word_info['related_information'],
+                'meanings': word_info['meanings']
             },
             ConditionExpression='attribute_not_exists(word)'
         )
@@ -86,6 +120,6 @@ def lambda_handler(event, context):
 
     return {
         'statusCode': 200,
-        'body': f'[{response}]'
+        'body': f'[{word_info}]'
     }
     
