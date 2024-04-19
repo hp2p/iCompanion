@@ -19,13 +19,14 @@ def get_api_key():
     openai_api_key = json.load(response['Payload'])['body']['api_key']
     return openai_api_key
     
+    
 def query_llm(word):
     client = OpenAI( api_key=get_api_key() )
     user_prompt = f'''I want to memorize the meanings and usages of the vocabulary "{word}".
 Create a json string including 3 short usage samples including "{word}", 
 related information helpful to memorize "{word}" in Korean, 
 and dictionary meanings of "{word}" in Korean. 
-Remember that if the "{word}" is not a valid English vocabulary, use the closed word instead of "{word}".
+Remember that if the "{word}" is not a valid English vocabulary, use the closest word instead of "{word}".
 The json should be like:
 {{  "word": {word},
     "usages": [
@@ -51,7 +52,7 @@ The json should be like:
         )
     
     response = completion.choices[0].message.content
-    return json.loads(response)
+    return response
     
     
 TEMP_USER_ID = 'jaeman'
@@ -97,12 +98,14 @@ def lambda_handler(event, context):
     
     if 'Item' in word_info:
         item = word_info['Item']
-        return {
+        ret = {
             'statusCode': 200,
             'body': f'[{json.dumps(item)}]'
         }
+        return ret
 
-    word_info = query_llm(word.lower())
+    word_str = query_llm(word.lower())
+    word_info = json.loads(word_str)
 
     try:
         words_table.put_item(
@@ -118,8 +121,9 @@ def lambda_handler(event, context):
         if e.response['Error']['Code'] != 'ConditionalCheckFailedException':
             raise
 
-    return {
+    ret = {
         'statusCode': 200,
-        'body': f'[{word_info}]'
+        'body': f'[{word_str}]'
     }
+    return ret
     
