@@ -1,0 +1,90 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-input {
+  position: fixed;
+  padding: 5px;
+  background-color: #ddd;
+}
+
+.chat-input input[type="text"] {
+  width: calc(100% - 10px);
+  padding: 5px;
+  border: none;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.chat-input button {
+  padding: 5px 15px;
+  border: none;
+  border-radius: 5px;
+  background-color: SkyBlue;
+  color: white;
+  cursor: pointer;
+}
+
+.chat-window {
+  flex: 1;
+  overflow-y: auto;
+  padding: 5px;
+  background-color: Linen;
+  margin-top: 40px;
+}
+
+@media only screen and (max-width: 600px) {
+  .chat-input input[type="text"] {
+    width: calc(100% - 65px);
+  }
+
+  .chat-input button {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+}
+
+
+.tab-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1;
+}
+
+.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+
+/* 탭 버튼 스타일 */
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+}
+
+/* 활성화된 탭 버튼 스타일 */
+.tab button.active {
+  background-color: #ccc;
+}
+
+/* 탭 컨텐츠 스타일 */
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+  margin-top: 40px;
+}
