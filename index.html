@@ -1,130 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learn !</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .chat-input {
-            padding: 10px;
-            background-color: #ddd;
-        }
-        
-        .chat-input input[type="text"] {
-        width: calc(100% - 80px);
-            padding: 8px;
-            border: none;
-            border-radius: 5px;
-            margin-right: 10px;
-        }
-        
-        .chat-input button {
-            padding: 8px 15px;
-            border: none;
-            border-radius: 5px;
-            background-color: SkyBlue;
-            color: white;
-            cursor: pointer;
-        }
-        
-        .chat-window {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-            background-color: Linen;
-        }
-        
-        @media only screen and (max-width: 600px) {
-            .chat-input input[type="text"] {
-        width: calc(100% - 65px);
-            }
-            
-            .chat-input button {
-                padding: 8px 10px;
-                font-size: 14px;
-            }
-        }
-    </style>
-
-    <script>
-    function recvResponse(result) {
-        if (result !== "") {
-            var chatWindow = document.getElementById("learn-window");
-            var messageElement = document.createElement("p");
-            
-            let content = '';
-            const data = JSON.parse(result);
-
-            data.forEach(item => {
-                content += '<div><h3 style="background-color:LightSkyBlue;">' + item.word + '</h3>';
-                item.usages.forEach(usage => { 
-                    content += '<li>' + usage + '</li>';
-		});
-	        content += '<p><small>[Related]</small>\ \ <strong>' + item.related_information + '</strong></p>';
-		content += '<p><small>[Meanings]</small>\ \ <strong>' + item.meanings + '</strong></div><hr></p>';
-	    });
-
-            // messageElement.textContent = content;
-            messageElement.innerHTML = content;
-            chatWindow.appendChild(messageElement);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-            document.getElementById("new-word").value = "";
-        }
-    }
-
-    var callAPI = ()=>{
-    word = document.getElementById("new-word").value.trim()
-        var myHeaders = new Headers();
-        myHeaders.append("Content-Type", "application/json");
-        var raw = JSON.stringify({"word":word});
-        var requestOptions = {
-            method: 'POST',
-            headers: myHeaders,
-            body: raw,
-            redirect: 'follow'
-        };
-        document.getElementById("new-word").value = "Thinking about " + word + " ...";
-
-        fetch("https://n2ak6nmytl.execute-api.us-west-2.amazonaws.com/dev/", requestOptions)
-        .then(response => response.text())
-        .then(result => recvResponse(JSON.parse(result).body))
-        .catch(error => console.log('error', error));
-    }
-	    
-    </script>
-
+  <title>iComp</title>
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
+  <div class="tab-container">
+    <div class="tab">
+      <button class="tablinks" onclick="openTab(event, 'NewWordTab')" id="defaultOpen">New Word</button>
+      <button class="tablinks" onclick="openTab(event, 'StoryTab')">Story</button>
+    </div>
+ </div>
 
-<div class="chat-input">
-    <input type="text" id="new-word" placeholder="New word...">
-    <button id="new-word-button" onclick="callAPI()">Save</button>
-</div>
+  <div id="NewWordTab" class="tabcontent">
+    <div class="chat-input">
+      <input type="text" id="new-word" placeholder="New word...">
+      <button id="new-word-button" onclick="callAPI()">Save</button>
+    </div>
+    <div class="chat-window" id="learn-window"></div>
+    <script>
+      var input = document.getElementById("new-word");
+      input.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          document.getElementById("new-word-button").click();
+        }
+      });
+    </script>
+  </div>
 
-<div class="chat-window" id="learn-window">
-    <!-- Chat messages will be displayed here -->
-</div>
+  <div id="StoryTab" class="tabcontent">
+    <h3>Tab 2</h3>
+    <p>Tab 2 내용입니다.</p>
+  </div>
 
-<script>
-    var input = document.getElementById("new-word");
-    console.log('input = ', input)
-    input.addEventListener("keypress", function(event) {
-	if(event.key == "Enter") {
-	    event.preventDefault();
-	    document.getElementById("new-word-button").click();
-	}
-    });
-</script>
-
+  <script src="script.js"></script>
 </body>
 </html>
-
