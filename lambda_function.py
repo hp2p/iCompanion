@@ -55,12 +55,12 @@ The json should be like:
     return response
     
     
-TEMP_USER_ID = 'jaeman'
+TEMP_USER_ID = 'jaeman'.lower()
 
 def lambda_handler(event, context):
 
     today = time.strftime('%Y%m%d', time.gmtime())
-    word = event['word']
+    word = event['word'].lower()
     
     user_info = users_table.get_item(Key={'user_id': TEMP_USER_ID, 'in_date': today})
     if 'Item' in user_info:
