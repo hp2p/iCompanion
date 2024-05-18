@@ -55,13 +55,9 @@ The json should be like:
     return response
     
     
-TEMP_USER_ID = 'jaeman'.lower()
+TEMP_USER_ID = 'jaeman'
 
-def lambda_handler(event, context):
-
-    today = time.strftime('%Y%m%d', time.gmtime())
-    word = event['word'].lower()
-    
+def handle_new_word(word, today):
     user_info = users_table.get_item(Key={'user_id': TEMP_USER_ID, 'in_date': today})
     if 'Item' in user_info:
         item = user_info['Item']
@@ -98,13 +94,10 @@ def lambda_handler(event, context):
     
     if 'Item' in word_info:
         item = word_info['Item']
-        ret = {
-            'statusCode': 200,
-            'body': f'[{json.dumps(item)}]'
-        }
+        ret = f'{json.dumps(item)}'
         return ret
 
-    word_str = query_llm(word.lower())
+    word_str = query_llm(word)
     word_info = json.loads(word_str)
 
     try:
@@ -121,9 +114,26 @@ def lambda_handler(event, context):
         if e.response['Error']['Code'] != 'ConditionalCheckFailedException':
             raise
 
+    return word_str
+    
+    
+    
+    
+def lambda_handler(event, context):
+
+    requestType = event['requestType']
+    today = time.strftime('%Y%m%d', time.gmtime())
+    
+    if requestType == 'new-word':
+        word = event['word']
+        word_str = handle_new_word(word, today)
+    elif requestType == 'story':
+        word_str = 'mystory'
+
     ret = {
         'statusCode': 200,
-        'body': f'[{word_str}]'
+        'body': f'{word_str}',
+        'requestType': requestType
     }
     return ret
     
