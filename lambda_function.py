@@ -1,7 +1,7 @@
 import json
 import boto3
 import botocore
-import time
+from datetime import datetime, timedelta
 from openai import OpenAI
 
 dynamodb = boto3.resource('dynamodb')
@@ -20,7 +20,7 @@ def get_api_key():
     return openai_api_key
     
     
-def query_llm(word):
+def query_new_word_to_llm(word):
     client = OpenAI( api_key=get_api_key() )
     user_prompt = f'''I want to memorize the meanings and usages of the vocabulary "{word}".
 Create a json string including 3 short usage samples including "{word}", 
@@ -97,7 +97,7 @@ def handle_new_word(word, today):
         ret = f'{json.dumps(item)}'
         return ret
 
-    word_str = query_llm(word)
+    word_str = query_new_word_to_llm(word)
     word_info = json.loads(word_str)
 
     try:
@@ -117,18 +117,72 @@ def handle_new_word(word, today):
     return word_str
     
     
+def past_word_list(userid):
+    date_deltas = [1, 3, 7, 14]
+    words = []
+    
+    for date_delta in date_deltas:
+        tm = (datetime.today() - timedelta(days=date_delta)).strftime('%Y%m%d')
+    
+        user_info = users_table.get_item(Key={'user_id': userid, 'in_date': tm})
+        if 'Item' in user_info:
+            item = user_info['Item']
+            words.extend(item['words'])
+    return words
+
+
+def query_story_to_llm(words):
+    client = OpenAI( api_key=get_api_key() )
+    words = ','.join(words)
+    user_prompt = f'''Tell me a middle school level elegant story which contains the following words.
+{words}
+No other explanations.
+'''
+   
+    completion = client.chat.completions.create(
+        model='gpt-3.5-turbo',
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0,
+        max_tokens=512,
+        top_p=1,
+        frequency_penalty=0.0,
+        presence_penalty=0.0
+        )
+    
+    response = completion.choices[0].message.content
+    return response
     
     
+def handle_story(today):
+    user_info = users_table.get_item(Key={'user_id': TEMP_USER_ID, 'in_date': today})
+    if 'Item' in user_info:
+        item = user_info['Item']
+        '''
+        story = item['story']
+        if story:
+            return story
+            '''
+    
+    words = past_word_list(TEMP_USER_ID)
+    story = query_story_to_llm(words)
+    story = story.replace('.', '.<hr/>')
+
+    return story
+
+
 def lambda_handler(event, context):
 
     requestType = event['requestType']
-    today = time.strftime('%Y%m%d', time.gmtime())
+    today = datetime.today().strftime('%Y%m%d')
     
     if requestType == 'new-word':
         word = event['word']
         word_str = handle_new_word(word, today)
     elif requestType == 'story':
-        word_str = 'mystory'
+        word_str = handle_story(today)
 
     ret = {
         'statusCode': 200,
