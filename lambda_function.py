@@ -163,10 +163,9 @@ No other explanations.
     
     response = completion.choices[0].message.content
     return response
-
-
+    
 def format_story(story):
-    return story.replace('.', '.<hr/>')
+    return story.replace('. ', '.<hr/>').replace('."', '."<hr/>')
     
     
 def handle_story(today):
@@ -205,6 +204,7 @@ def handle_story(today):
             return f"Couldn't put item in table {users_table.name}." \
                 + f" Here's why: {e.response['Error']['Code']}: {e.response['Error']['Message']}" \
                 + "<hr/>" + story
+        
     
     return format_story(story)
 
