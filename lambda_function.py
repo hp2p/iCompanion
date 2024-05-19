@@ -4,6 +4,7 @@ import botocore
 from datetime import datetime, timedelta
 from openai import OpenAI
 
+
 dynamodb = boto3.resource('dynamodb')
 words_table = dynamodb.Table('iCompanionWordsTable')
 users_table = dynamodb.Table('iCompanionUsersTable')
@@ -26,7 +27,7 @@ def query_new_word_to_llm(word):
 Create a json string including 3 short usage samples including "{word}", 
 related information helpful to memorize "{word}" in Korean, 
 and dictionary meanings of "{word}" in Korean. 
-Remember that if the "{word}" is not a valid English vocabulary, use the closest word instead of "{word}".
+Remember that if the "{word}" is not a valid English vocabulary, use the closest word to "{word}".
 The json should be like:
 {{  "word": {word},
     "usages": [
@@ -65,6 +66,12 @@ def handle_new_word(word, today):
         if word not in words:
             words.append(word)
             try:
+                users_table.update_item(
+                    Key={'user_id': TEMP_USER_ID, 'in_date': today},
+                    UpdateExpression="set words=:new_words",
+                    ExpressionAttributeValues={":new_words": words}
+                )
+                '''
                 users_table.put_item(
                     Item={
                         'user_id': TEMP_USER_ID,
@@ -73,6 +80,7 @@ def handle_new_word(word, today):
                     },
                     ConditionExpression='attribute_not_exists(word)'
                 )
+                '''
             except botocore.exceptions.ClientError as e:
                 if e.response['Error']['Code'] != 'ConditionalCheckFailedException':
                     raise
@@ -82,7 +90,8 @@ def handle_new_word(word, today):
                 Item={
                     'user_id': TEMP_USER_ID,
                     'in_date': today,
-                    'words': [word]
+                    'words': [word],
+                    'story': ''
                 },
                 ConditionExpression='attribute_not_exists(word)'
             )
@@ -140,7 +149,7 @@ No other explanations.
 '''
    
     completion = client.chat.completions.create(
-        model='gpt-3.5-turbo',
+        model='gpt-4o',
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": user_prompt},
@@ -154,23 +163,50 @@ No other explanations.
     
     response = completion.choices[0].message.content
     return response
+
+
+def format_story(story):
+    return story.replace('.', '.<hr/>')
     
     
 def handle_story(today):
     user_info = users_table.get_item(Key={'user_id': TEMP_USER_ID, 'in_date': today})
-    if 'Item' in user_info:
-        item = user_info['Item']
-        '''
-        story = item['story']
-        if story:
-            return story
-            '''
-    
+    if ('Item' in user_info) and ('story' in user_info['Item']):
+        return format_story(user_info['Item']['story'])
+
     words = past_word_list(TEMP_USER_ID)
     story = query_story_to_llm(words)
-    story = story.replace('.', '.<hr/>')
-
-    return story
+    
+    if 'Item' in user_info:
+        try:
+            users_table.update_item(
+                Key={'user_id': TEMP_USER_ID, 'in_date': today},
+                UpdateExpression="set story=:new_story",
+                ExpressionAttributeValues={":new_story": story}
+            )
+            
+        except botocore.exceptions.ClientError as e:
+            return f"Couldn't update item in table {users_table.name}." \
+                + f" Here's why: {e.response['Error']['Code']}: {e.response['Error']['Message']}" \
+                + "<hr/>" + story
+    else:
+        try:
+            users_table.put_item(
+                Item={
+                    'user_id': TEMP_USER_ID,
+                    'in_date': today,
+                    'words': [],
+                    'story': story
+                },
+                ConditionExpression='attribute_not_exists(word)'
+            )
+            
+        except botocore.exceptions.ClientError as e:
+            return f"Couldn't put item in table {users_table.name}." \
+                + f" Here's why: {e.response['Error']['Code']}: {e.response['Error']['Message']}" \
+                + "<hr/>" + story
+    
+    return format_story(story)
 
 
 def lambda_handler(event, context):
@@ -190,4 +226,3 @@ def lambda_handler(event, context):
         'requestType': requestType
     }
     return ret
-    
