@@ -58,7 +58,7 @@ The json should be like:
     
 TEMP_USER_ID = 'jaeman'
 
-def handle_new_word(word, today):
+def handle_new_word(word, today, local_request):
     user_info = users_table.get_item(Key={'user_id': TEMP_USER_ID, 'in_date': today})
     if 'Item' in user_info:
         item = user_info['Item']
@@ -71,16 +71,6 @@ def handle_new_word(word, today):
                     UpdateExpression="set words=:new_words",
                     ExpressionAttributeValues={":new_words": words}
                 )
-                '''
-                users_table.put_item(
-                    Item={
-                        'user_id': TEMP_USER_ID,
-                        'in_date': today,
-                        'words': words
-                    },
-                    ConditionExpression='attribute_not_exists(word)'
-                )
-                '''
             except botocore.exceptions.ClientError as e:
                 if e.response['Error']['Code'] != 'ConditionalCheckFailedException':
                     raise
@@ -99,6 +89,9 @@ def handle_new_word(word, today):
             if e.response['Error']['Code'] != 'ConditionalCheckFailedException':
                 raise
 
+    if local_request:
+        return ''
+                
     word_info = words_table.get_item(Key={'word': word})
     
     if 'Item' in word_info:
@@ -216,7 +209,10 @@ def lambda_handler(event, context):
     
     if requestType == 'new-word':
         word = event['word']
-        word_str = handle_new_word(word, today)
+        word_str = handle_new_word(word, today, local_request = False)
+    elif requestType == 'new-word-local':
+        word = event['word']
+        word_str = handle_new_word(word, today, local_request = True)
     elif requestType == 'story':
         word_str = handle_story(today)
 
