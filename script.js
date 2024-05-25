@@ -1,3 +1,4 @@
+
 const DB_NAME = "words_db";
 const TABLE_NAME = "words_table";
 const INDEX_NAME = "words_index";
@@ -169,11 +170,19 @@ function callAPI(requestType)
             .then(result => recvResponse(result, local_request = false) )
             .catch(error => console.log('error', error));
     }
-
 }
 
 
-function openTab(evt, tabName) {
+function request_old_word(old_word)
+{
+    document.getElementById("new-word").value = old_word;
+    callAPI('new-word');
+    document.getElementById("defaultOpen").click();
+}
+
+
+function openTab(evt, tabName) 
+{
   var i, tabcontent, tablinks;
   tabcontent = document.getElementsByClassName("tabcontent");
   for (i = 0; i < tabcontent.length; i++) {
