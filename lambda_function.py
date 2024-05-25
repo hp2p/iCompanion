@@ -169,6 +169,11 @@ def handle_story(today):
     words = past_word_list(TEMP_USER_ID)
     story = query_story_to_llm(words)
     
+    res = ''
+    for w in words:
+        res += f'''<a href="#" onclick="request_old_word('{w}'); return false;">{w}</a>, '''
+    story = story + '<hr/> <hr/>' + res
+    
     if 'Item' in user_info:
         try:
             users_table.update_item(
