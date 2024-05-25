@@ -1,7 +1,9 @@
+
 const DB_NAME = "words_db";
 const TABLE_NAME = "words_table";
 const INDEX_NAME = "words_index";
-const STORY_TABLE_NAME = "story_table";
+
+const TODAY = new Date().toISOString().slice(0, 10);
 
 let db;
 function getWordFromDb(word)
@@ -83,6 +85,12 @@ function recvResponse(raw_result, local_request)
             content = parsed_result.body;
             messageElement.innerHTML = content;
             storyWindow.appendChild(messageElement);
+
+            if(local_request == false)
+            {
+                localStorage.setItem("story_date", TODAY);
+                localStorage.setItem("story", raw_result);
+            }
         }
     }
 }
@@ -147,6 +155,14 @@ function callAPI(requestType)
     }
     else if(requestType == "story") 
     {
+        let story_date = localStorage.getItem("story_date");
+        if(story_date == TODAY)
+        {
+            story = localStorage.getItem("story");
+            recvResponse(story, local_request = true);
+            return;
+        }
+
         let myHeaders = new Headers();
         myHeaders.append("Content-Type", "application/json");
         let raw = JSON.stringify({ "requestType": "story" });
@@ -182,7 +198,7 @@ function openTab(evt, tabName) {
 
 
 function load_story() {
-    // callAPI("story");
+    callAPI("story");
 }
 
 
