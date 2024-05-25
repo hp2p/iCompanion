@@ -1,4 +1,3 @@
-
 const DB_NAME = "words_db";
 const TABLE_NAME = "words_table";
 const INDEX_NAME = "words_index";
@@ -95,7 +94,6 @@ function recvResponse(raw_result, local_request)
     }
 }
 
-
 function callAPI(requestType) 
 {
     if(requestType == "new-word") 
@@ -106,51 +104,44 @@ function callAPI(requestType)
         let index = objectStore.index(INDEX_NAME);
         let getRequest = index.get(word);
 
+        let myHeaders = new Headers();
+        myHeaders.append("Content-Type", "application/json");
+
+        let requestOptions = 
+        {
+            method: 'POST',
+            headers: myHeaders,
+            body: null,
+            redirect: 'follow'
+        };
+
+        let body_str = { "requestType": "new-word", "word": word };
         getRequest.onsuccess = function(event) 
         {
             let result = event.target.result;
             if(result)
             {
                 recvResponse(result['info'], local_request = true);
-                return;
+                body_str["requestType"] = "new-word-local";
             }
-            else
-            {
-                let myHeaders = new Headers();
-                myHeaders.append("Content-Type", "application/json");
-                let raw = JSON.stringify({ "requestType": "new-word", "word": word });
-                var requestOptions = 
-                {
-                    method: 'POST',
-                    headers: myHeaders,
-                    body: raw,
-                    redirect: 'follow'
-                };
-                fetch("https://n2ak6nmytl.execute-api.us-west-2.amazonaws.com/dev/", requestOptions)
-                    .then(response => response.text())
-                    .then(result => recvResponse(result, local_request = false) )
-                    .catch(error => console.log('error', error));
-            }
-        };
 
-        getRequest.onerror = function(event) {
-            console.log('getWordFromDb', event);
-            let myHeaders = new Headers();
-            myHeaders.append("Content-Type", "application/json");
-            let raw = JSON.stringify({ "requestType": "new-word", "word": word });
-            var requestOptions = 
-            {
-                method: 'POST',
-                headers: myHeaders,
-                body: raw,
-                redirect: 'follow'
-            };
+            requestOptions['body'] = JSON.stringify(body_str);
             fetch("https://n2ak6nmytl.execute-api.us-west-2.amazonaws.com/dev/", requestOptions)
                 .then(response => response.text())
                 .then(result => recvResponse(result, local_request = false) )
                 .catch(error => console.log('error', error));
         };
 
+        getRequest.onerror = function(event) 
+        {
+            console.log('getWordFromDb', event);
+            requestOptions['body'] = JSON.stringify(body_str);
+
+            fetch("https://n2ak6nmytl.execute-api.us-west-2.amazonaws.com/dev/", requestOptions)
+                .then(response => response.text())
+                .then(result => recvResponse(result, local_request = false) )
+                .catch(error => console.log('error', error));
+        };
         document.getElementById("new-word").value = "Thinking about " + word + " ...";
     }
     else if(requestType == "story") 
