@@ -120,7 +120,7 @@ def handle_new_word(word, today, local_request):
     
     
 def past_word_list(userid):
-    date_deltas = [1, 3, 7, 14]
+    date_deltas = [1, 3, 7, 14, 28]
     words = []
     
     for date_delta in date_deltas:
@@ -129,14 +129,16 @@ def past_word_list(userid):
         user_info = users_table.get_item(Key={'user_id': userid, 'in_date': tm})
         if 'Item' in user_info:
             item = user_info['Item']
-            words.extend(item['words'])
+            for w in item['words']:
+                if w not in words:
+                    words.append(w)
     return words
 
 
 def query_story_to_llm(words):
     client = OpenAI( api_key=get_api_key() )
     words = ','.join(words)
-    user_prompt = f'''Tell me a middle school level elegant story which contains the following words.
+    user_prompt = f'''Tell me a middle school level short story that inclus the following words.
 {words}
 No other explanations.
 '''
@@ -158,7 +160,9 @@ No other explanations.
     return response
     
 def format_story(story):
-    return story.replace('. ', '.<hr/>').replace('."', '."<hr/>')
+    story = story.replace('. ', '.<hr/>')
+    story = story.replace('Mr.<hr/>', 'Mr.').replace('Mrs.<hr/>', 'Mrs.').replace('Ms.<hr/>', 'Ms.').replace('Dr.<hr/>', 'Dr.')
+    return story
     
     
 def handle_story(today):
@@ -202,7 +206,6 @@ def handle_story(today):
             return f"Couldn't put item in table {users_table.name}." \
                 + f" Here's why: {e.response['Error']['Code']}: {e.response['Error']['Message']}" \
                 + "<hr/>" + story
-        
     
     return format_story(story)
 
@@ -211,12 +214,12 @@ def lambda_handler(event, context):
 
     requestType = event['requestType']
     today = datetime.today().strftime('%Y%m%d')
+    if 'word' in event:
+        word = event['word'].lower()
     
     if requestType == 'new-word':
-        word = event['word']
         word_str = handle_new_word(word, today, local_request = False)
     elif requestType == 'new-word-local':
-        word = event['word']
         word_str = handle_new_word(word, today, local_request = True)
     elif requestType == 'story':
         word_str = handle_story(today)
