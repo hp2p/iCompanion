@@ -100,6 +100,7 @@ function callAPI(requestType)
     if(requestType == "new-word") 
     {
         let word = document.getElementById("new-word").value.trim()
+        word = word.toLowerCase();
 
         let objectStore = db.transaction([TABLE_NAME], "readonly").objectStore(TABLE_NAME);
         let index = objectStore.index(INDEX_NAME);
