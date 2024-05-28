@@ -65,13 +65,13 @@ function recvResponse(raw_result, local_request)
             let messageElement = document.createElement("p");
             let content = '';
   
-            content += '<div><h3 style="background-color:LightSkyBlue;">' + data['word'] + '</h3>';
+            content += '<div><h3 style="background-color:LightSkyBlue;">&nbsp;&nbsp;' + data['word'] + '</h3>';
             data['usages'].forEach(usage => 
             {
                 content += '<li>' + usage + '</li>';
             });
             content += '<p><small>[Related]</small> <strong>' + data['related_information'] + '</strong></p>';
-            content += '<p><small>[Meanings]</small> <strong>' + data['meanings'] + '</strong></div><hr></p>';
+            content += '<p><small>[Meanings]</small> <strong>' + data['meanings'] + '</strong></div></p>';
   
             messageElement.innerHTML = content;
             chatWindow.appendChild(messageElement);
