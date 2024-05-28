@@ -18,9 +18,10 @@
   <div id="NewWordTab" class="tabcontent">
     <div class="chat-input">
       <input type="text" id="new-word" placeholder="New word...">
-      <button id="new-word-button" onclick="callAPI('new-word')">Save</button>
+      <button id="new-word-button" onclick="callAPI('new-word')">Get</button>
     </div>
-    <div class="chat-window" id="learn-window"></div>
+    <div class="chat-window" id="learn-window">
+    </div>
     <script>
       var input = document.getElementById("new-word");
       input.addEventListener("keypress", function(event) {
