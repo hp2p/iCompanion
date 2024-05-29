@@ -26,10 +26,8 @@ function getWordFromDb(word)
 
 function addWordToDb(word, info)
 {
-    const newWord = {word: word, info: info};
+    const newWord = {word: word, info: info, date: TODAY};
     const transaction = db.transaction( [ TABLE_NAME ], 'readwrite' );
-
-    console.log('addWordToDb: ', word, info);
 
     transaction.onerror = function(event) {
         console.log('addWordToDb transaction.onerror ', event);
@@ -46,8 +44,7 @@ function addWordToDb(word, info)
 
 function recvResponse(raw_result, local_request) 
 {
-    console.log('raw_result= [', raw_result, ']');
-    console.log('local_request = ', local_request);
+    console.log('recvResponse: local_request = ', local_request);
 
     parsed_result = JSON.parse(raw_result);
     if (parsed_result.body !== "") 
@@ -65,7 +62,7 @@ function recvResponse(raw_result, local_request)
             let messageElement = document.createElement("p");
             let content = '';
   
-            content += '<div><h3 style="background-color:LightSkyBlue;">&nbsp;&nbsp;' + data['word'] + '</h3>';
+            content += '<div><h3 style="background-color:LightSkyBlue;font-size:1.5em;">&nbsp;&nbsp;' + data['word'] + '</h3>';
             data['usages'].forEach(usage => 
             {
                 content += '<li>' + usage + '</li>';
@@ -74,7 +71,8 @@ function recvResponse(raw_result, local_request)
             content += '<p><small>[Meanings]</small> <strong>' + data['meanings'] + '</strong></div></p>';
   
             messageElement.innerHTML = content;
-            chatWindow.appendChild(messageElement);
+            //chatWindow.appendChild(messageElement);
+            chatWindow.insertBefore(messageElement, chatWindow.firstChild);
             chatWindow.scrollTop = chatWindow.scrollHeight;
             document.getElementById("new-word").value = "";
         }
@@ -136,13 +134,13 @@ function callAPI(requestType)
 
         getRequest.onerror = function(event) 
         {
-            console.log('getWordFromDb', event);
+            console.log('getWordFromDb.onerror', event);
             requestOptions['body'] = JSON.stringify(body_str);
 
             fetch("https://n2ak6nmytl.execute-api.us-west-2.amazonaws.com/dev/", requestOptions)
                 .then(response => response.text())
                 .then(result => recvResponse(result, local_request = false) )
-                .catch(error => console.log('error', error));
+                .catch(error => console.log('fetch.catch.error', error));
         };
         document.getElementById("new-word").value = "Thinking about " + word + " ...";
     }
@@ -169,7 +167,7 @@ function callAPI(requestType)
         fetch("https://n2ak6nmytl.execute-api.us-west-2.amazonaws.com/dev/", requestOptions)
             .then(response => response.text())
             .then(result => recvResponse(result, local_request = false) )
-            .catch(error => console.log('error', error));
+            .catch(error => console.log('story fetch.catch error', error));
     }
 }
 
@@ -208,16 +206,19 @@ document.getElementById("defaultOpen").click();
 
 const dbopen_request = window.indexedDB.open(DB_NAME, 1);
 
-dbopen_request.onupgradeneeded = function(event) {
+dbopen_request.onupgradeneeded = function(event) 
+{
     db = event.target.result;
 
     console.log('dbopen_request.onsuccess', db);
 
-    db.onerror = function(event) {
+    db.onerror = function(event) 
+    {
         console.log('onupgradeneeded db.onerror: ', event);
     };
 
-    if( ! db.objectStoreNames.contains(TABLE_NAME)) {
+    if( ! db.objectStoreNames.contains(TABLE_NAME)) 
+    {
         let table = db.createObjectStore(TABLE_NAME, {keyPath: 'id', autoIncrement:true});
         table.createIndex(INDEX_NAME, "word", {unique: false});
         table.onerror = function(event) {
@@ -229,6 +230,28 @@ dbopen_request.onupgradeneeded = function(event) {
 dbopen_request.onsuccess = function(event) {
     db = event.target.result;
     console.log('dbopen_request.onsuccess', db);
+
+    const transaction = db.transaction( [ TABLE_NAME ], 'readonly' );
+
+    transaction.onerror = function(event) 
+    {
+        console.log('dbopen_request.onsuccess transaction.onerror ', event);
+    };
+    const objectStore = transaction.objectStore( TABLE_NAME );
+    const request = objectStore.openCursor(null, "prev");
+    request.onsuccess = function(event) 
+    {
+        console.log('request.onsuccess in dbopen_request.onsuccess');
+        const cursor = event.target.result;
+        if(cursor)
+        {
+            if(cursor.value['date'] == TODAY)
+            {
+                recvResponse(cursor.value['info'], local_request = true);
+                cursor.continue();
+            }
+        }
+    }
 }
 
 dbopen_request.onerror = function(event) {
